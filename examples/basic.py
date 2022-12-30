@@ -3,7 +3,7 @@ from __future__ import annotations
 import sigy
 
 
-def contact(name: str | None=None, email: str | None = None, id: int | None = None, **kwargs) -> str:
+def contact(name: str | None=None, email: str | None = None, id: int | None = None) -> str:
     if not (name or email or id):
         raise ValueError("Must supply name, email, or id")
     if len(tuple(filter(lambda item: item is not None, (name, email, id)))) > 1:
@@ -12,5 +12,5 @@ def contact(name: str | None=None, email: str | None = None, id: int | None = No
     return f"{name or email or id} loaded succesfully"
 
 @sigy.inject(contact=contact)
-def user_information(contact: str, start: int, **kwargs) -> list[str]:
+def user_information(contact: str, start: int) -> list[str]:
     return list(contact)[start:]
