@@ -28,15 +28,12 @@ def inject(**override_callbacks: Callable):
 
         for name, callback in override_callbacks.items():
             for param_name, type_override in callback.__annotations__.items():
-                if param_name in ("return", ):
+                if param_name in ("return",):
                     continue
-                
+
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 if type_override:
-                    if (
-                        existing_type
-                        and type_override != existing_type
-                    ):
+                    if existing_type and type_override != existing_type:
                         raise TypeError(
                             f"Type mismatch introduced by sigy injected function {callback} "
                             f"parameter {param_name} requiring type {type_override} existing: {existing_type}."
