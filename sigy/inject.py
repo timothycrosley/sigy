@@ -31,9 +31,8 @@ def inject(**override_callbacks: Callable):
 
         for name, callback in override_callbacks.items():
             callback_signature = signature(callback)
-            for param_name, type_override in callback.__annotations__.items():
-                if param_name in ("return",):
-                    continue
+            for param_name, param in callback_signature.parameters.items():
+                type_override = callback.__annotations__.get(param_name)
 
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 if type_override:
@@ -45,7 +44,7 @@ def inject(**override_callbacks: Callable):
                             )
                     else:
                         type_overrides[param_name] = type_override
-                        add_params.append(callback_signature.parameters[param_name])
+                        add_params.append(param)
 
         @wraps(function)
         def wrapped_function(*args, **kwargs):
