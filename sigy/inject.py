@@ -1,4 +1,5 @@
 from functools import wraps
+from inspect import Parameter, signature
 from typing import Any, Callable
 
 from sigy import introspect
@@ -25,20 +26,26 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
 def inject(**override_callbacks: Callable):
     def wrapper(function):
         type_overrides: dict[str, Any] = {}
+        add_params: list[Parameter] = []
+        function_signature = signature(function)
 
         for name, callback in override_callbacks.items():
+            callback_signature = signature(callback)
             for param_name, type_override in callback.__annotations__.items():
                 if param_name in ("return",):
                     continue
 
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 if type_override:
-                    if existing_type and type_override != existing_type:
-                        raise TypeError(
-                            f"Type mismatch introduced by sigy injected function {callback} "
-                            f"parameter {param_name} requiring type {type_override} existing: {existing_type}."
-                        )
-                    type_overrides[param_name] = type_override
+                    if existing_type:
+                        if type_override != existing_type:
+                            raise TypeError(
+                                f"Type mismatch introduced by sigy injected function {callback} "
+                                f"parameter {param_name} requiring type {type_override} existing: {existing_type}."
+                            )
+                    else:
+                        type_overrides[param_name] = type_override
+                        add_params.append(callback_signature.parameters[param_name])
 
         @wraps(function)
         def wrapped_function(*args, **kwargs):
@@ -47,6 +54,11 @@ def inject(**override_callbacks: Callable):
             return function(*args, **_generate_accepted_kwargs(function, kwargs))
 
         wrapped_function.__annotations__.update(type_overrides)
+
+        wrapped_function_signature = function_signature.replace(
+            parameters=[*function_signature.parameters.values(), *add_params]
+        )
+        wrapped_function.__signature__ = wrapped_function_signature
         return wrapped_function
 
     return wrapper
