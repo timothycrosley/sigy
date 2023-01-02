@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+import itertools
+from collections import defaultdict
 from functools import wraps
-from inspect import Parameter, signature
+from inspect import Parameter, _ParameterKind, signature
 from typing import Any, Callable
 
 from sigy import introspect
+
+PARAM_GROUP_ORDER = ()
 
 
 def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
@@ -27,9 +33,11 @@ def inject(**override_callbacks: Callable):
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
-        params: dict[str, Any] = {name: value for name, value in function_signature.parameters.items()}
+        params: dict[str, Any] = {
+            name: value for name, value in function_signature.parameters.items()
+        }
         add_params: list[Parameter] = []
-        
+
         for name, callback in override_callbacks.items():
             callback_signature = signature(callback)
             for param_name, param in callback_signature.parameters.items():
@@ -64,8 +72,15 @@ def inject(**override_callbacks: Callable):
 
         wrapped_function.__annotations__.update(type_overrides)
 
+        grouped_params: dict[_ParameterKind, list[Parameter]] = defaultdict(list)
+        for group, params in itertools.groupby(
+            itertools.chain(function_signature.parameters.values(), add_params),
+            key=lambda param: param.kind,
+        ):
+            grouped_params[group].extend(params)
+
         wrapped_function_signature = function_signature.replace(
-            parameters=[*function_signature.parameters.values(), *add_params]
+            parameters=itertools.chain(*(grouped_params[key] for key in sorted(grouped_params)))
         )
         wrapped_function.__signature__ = wrapped_function_signature
         return wrapped_function
