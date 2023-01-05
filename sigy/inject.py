@@ -29,7 +29,7 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
     return {}
 
 
-def inject(prefix_: str | None = None, **override_callbacks: Callable):
+def inject(prefix_: str | None=None, **override_callbacks: Callable):
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
@@ -41,8 +41,10 @@ def inject(prefix_: str | None = None, **override_callbacks: Callable):
         for name, callback in override_callbacks.items():
             callback_signature = signature(callback)
             for param_name, param in callback_signature.parameters.items():
+                if prefix_:
+                    param_name = f"{prefix_}{param_name}"
+                    param = Parameter(name=param_name, kind=param.kind, default=param.default, annotation=param.annotation)
                 type_override = callback.__annotations__.get(param_name)
-
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 existing_param = function_signature.parameters.get(param_name, None)
                 if type_override:
@@ -63,36 +65,16 @@ def inject(prefix_: str | None = None, **override_callbacks: Callable):
                         add_params.append(param)
                         params[param_name] = param
 
-        if introspect.is_method(function):
-
-            @wraps(function)
-            def wrapped_function(self, *args, **kwargs):
-                for name, callback in override_callbacks.items():
-                    if name not in kwargs:
-                        breakpoint()
-                        if introspect.is_method(callback):
-                            kwargs[name] = callback(
-                                self, *args, **_generate_accepted_kwargs(callback, kwargs)
-                            )
-                        else:
-                            kwargs[name] = callback(
-                                *args, **_generate_accepted_kwargs(callback, kwargs)
-                            )
-                return function(self, *args, **_generate_accepted_kwargs(function, kwargs))
-
-        else:
-
-            @wraps(function)
-            def wrapped_function(*args, **kwargs):
-                for name, callback in override_callbacks.items():
-                    if name not in kwargs:
-                        if introspect.is_method(callback):
-                            raise TypeError("Can't inject a method into a function.")
-                        else:
-                            kwargs[name] = callback(
-                                *args, **_generate_accepted_kwargs(callback, kwargs)
-                            )
-                return function(*args, **_generate_accepted_kwargs(function, kwargs))
+        @wraps(function)
+        def wrapped_function(*args, **kwargs):
+            if prefix_:
+                callback_kwargs = {key.split(prefix_, 1)[1]: value for key, value in kwargs.items() if key.startswith(prefix_)}
+            else:
+                callback_kwargs = kwargs
+            for name, callback in override_callbacks.items():
+                if name not in kwargs:
+                    kwargs[name] = callback(*args, **_generate_accepted_kwargs(callback, callback_kwargs))
+            return function(*args, **_generate_accepted_kwargs(function, kwargs))
 
         wrapped_function.__annotations__.update(type_overrides)
 
