@@ -29,7 +29,7 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
     return {}
 
 
-def inject(prefix_: str | None=None, **override_callbacks: Callable):
+def inject(prefix_: str | None = None, **override_callbacks: Callable):
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
@@ -43,7 +43,12 @@ def inject(prefix_: str | None=None, **override_callbacks: Callable):
             for param_name, param in callback_signature.parameters.items():
                 if prefix_:
                     param_name = f"{prefix_}{param_name}"
-                    param = Parameter(name=param_name, kind=param.kind, default=param.default, annotation=param.annotation)
+                    param = Parameter(
+                        name=param_name,
+                        kind=param.kind,
+                        default=param.default,
+                        annotation=param.annotation,
+                    )
                 type_override = callback.__annotations__.get(param_name)
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 existing_param = function_signature.parameters.get(param_name, None)
@@ -68,12 +73,18 @@ def inject(prefix_: str | None=None, **override_callbacks: Callable):
         @wraps(function)
         def wrapped_function(*args, **kwargs):
             if prefix_:
-                callback_kwargs = {key.split(prefix_, 1)[1]: value for key, value in kwargs.items() if key.startswith(prefix_)}
+                callback_kwargs = {
+                    key.split(prefix_, 1)[1]: value
+                    for key, value in kwargs.items()
+                    if key.startswith(prefix_)
+                }
             else:
                 callback_kwargs = kwargs
             for name, callback in override_callbacks.items():
                 if name not in kwargs:
-                    kwargs[name] = callback(*args, **_generate_accepted_kwargs(callback, callback_kwargs))
+                    kwargs[name] = callback(
+                        *args, **_generate_accepted_kwargs(callback, callback_kwargs)
+                    )
             return function(*args, **_generate_accepted_kwargs(function, kwargs))
 
         wrapped_function.__annotations__.update(type_overrides)
