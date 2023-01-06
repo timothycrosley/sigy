@@ -12,6 +12,6 @@ def contact(name: str | None=None, email: str | None = None, id: int | None = No
     return f"{name or email or id} loaded succesfully"
 
 
-@sigy.inject(prefix_="contact_", contact=contact)
+@sigy.inject(prefix_="contact_", contact=contact, shadow_=True)
 def user_information(contact: str, start: int) -> list[str]:
     return list(contact)[start:]

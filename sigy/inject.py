@@ -29,7 +29,7 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
     return {}
 
 
-def inject(prefix_: str | None = None, **override_callbacks: Callable):
+def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbacks: Callable):
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
@@ -41,6 +41,7 @@ def inject(prefix_: str | None = None, **override_callbacks: Callable):
         for name, callback in override_callbacks.items():
             callback_signature = signature(callback)
             for param_name, param in callback_signature.parameters.items():
+                type_override = callback.__annotations__.get(param_name)
                 if prefix_:
                     param_name = f"{prefix_}{param_name}"
                     param = Parameter(
@@ -49,7 +50,6 @@ def inject(prefix_: str | None = None, **override_callbacks: Callable):
                         default=param.default,
                         annotation=param.annotation,
                     )
-                type_override = callback.__annotations__.get(param_name)
                 existing_type = type_overrides.get(name, function.__annotations__.get(param_name))
                 existing_param = function_signature.parameters.get(param_name, None)
                 if type_override:
@@ -90,8 +90,18 @@ def inject(prefix_: str | None = None, **override_callbacks: Callable):
         wrapped_function.__annotations__.update(type_overrides)
 
         grouped_params: dict[_ParameterKind, list[Parameter]] = defaultdict(list)
+        if shadow_:
+            existing_params = (
+                value
+                for key, value in function_signature.parameters.items()
+                if key not in override_callbacks
+            )
+            for key in override_callbacks:
+                wrapped_function.__annotations__.pop(key)
+        else:
+            existing_params = function_signature.parameters.values()
         for group, params in itertools.groupby(
-            itertools.chain(function_signature.parameters.values(), add_params),
+            itertools.chain(existing_params, add_params),
             key=lambda param: param.kind,
         ):
             grouped_params[group].extend(params)
