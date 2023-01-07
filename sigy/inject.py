@@ -30,6 +30,15 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
 
 
 def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbacks: Callable):
+    """Injects a the provided callback functions as new parameters onto the wrapped function based on param_name=callback_function
+    The wrapped function is then modified to take on the parameters of the given callback function and place the results as the
+    parameter it replaced.
+
+    Special modifying arguents
+      - prefix_ - All arguments inherited by a given callback will have their name prefixed with this string.
+      - shadow_ - If `True` the param being injected into will be hidden from the signature of the wrapped function.
+    """
+
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
