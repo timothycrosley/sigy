@@ -1,0 +1,32 @@
+import pytest
+
+import sigy
+
+
+def contact(name: str | None = None, email: str | None = None, id: int | None = None) -> str:
+    """An example reusable function for the tests that represents contact loading based on one of many fields"""
+    if not (name or email or id):
+        raise ValueError("Must supply name, email, or id")
+    if len(tuple(filter(lambda item: item is not None, (name, email, id)))) > 1:
+        raise ValueError("Must only supply one of: name, email, or id")
+
+    return f"{name or email or id} loaded succesfully"
+
+
+def test_inject_basic():
+    @sigy.inject(contact=contact)
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert user_information(contact="Timothy", start=1) == "imothy"
+    assert user_information(name="Timothy", start=1) == "imothy loaded succesfully"
+    assert (
+        user_information(email="timothy.crosley@gmail.com", start=0)
+        == "timothy.crosley@gmail.com loaded succesfully"
+    )
+    assert user_information(id="123", start=0) == "123 loaded succesfully"
+
+    with pytest.raises(ValueError):
+        user_information(id="123", name="timothy", start=0)
+    with pytest.raises(ValueError):
+        user_information(start=0)
