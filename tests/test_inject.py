@@ -30,3 +30,26 @@ def test_inject_basic():
         user_information(id="123", name="timothy", start=0)
     with pytest.raises(ValueError):
         user_information(start=0)
+
+
+def test_inject_prefix():
+    """Testing injecting a function signature with a parameter prefix"""
+
+    @sigy.inject(contact=contact, prefix_="contact_")
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert user_information(contact="Timothy", start=1) == "imothy"
+    assert user_information(contact_name="Timothy", start=1) == "imothy loaded succesfully"
+    assert (
+        user_information(contact_email="timothy.crosley@gmail.com", start=0)
+        == "timothy.crosley@gmail.com loaded succesfully"
+    )
+    assert user_information(contact_id="123", start=0) == "123 loaded succesfully"
+
+    with pytest.raises(ValueError):
+        user_information(contact_id="123", contact_name="timothy", start=0)
+    with pytest.raises(ValueError):
+        user_information(start=0)
+    with pytest.raises(ValueError):
+        user_information(name="timothy", start=0)
