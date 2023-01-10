@@ -3,7 +3,7 @@ from __future__ import annotations
 import sigy
 
 
-def contact(name: str | None=None, email: str | None = None, id: int | None = None) -> str:
+def contact(name: str | None=None, email: str | None = None, id: int | None = None, *, y: str = "testing default") -> str:
     if not (name or email or id):
         raise ValueError("Must supply name, email, or id")
     if len(tuple(filter(lambda item: item is not None, (name, email, id)))) > 1:

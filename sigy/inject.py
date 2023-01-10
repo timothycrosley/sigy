@@ -11,6 +11,10 @@ from sigy import introspect
 PARAM_GROUP_ORDER = ()
 
 
+class NoOverridePressent:
+    pass
+
+
 def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
     """Dynamically creates a function that when called with dictionary of arguments will produce a kwarg that's
     compatible with the supplied function
@@ -42,6 +46,7 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
+        kwdefaults: dict[str, Any] = function.__kwdefaults__.copy() if function.__kwdefaults__ else {}
         params: dict[str, Any] = {
             name: value for name, value in function_signature.parameters.items()
         }
@@ -51,6 +56,7 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
             callback_signature = signature(callback)
             for param_name, param in callback_signature.parameters.items():
                 type_override = callback.__annotations__.get(param_name)
+                original_param_name = param_name
                 if prefix_:
                     param_name = f"{prefix_}{param_name}"
                     param = Parameter(
@@ -78,6 +84,18 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
                         type_overrides[param_name] = type_override
                         add_params.append(param)
                         params[param_name] = param
+                if callback.__kwdefaults__ and original_param_name in callback.__kwdefaults__:
+                    default_override = callback.__kwdefaults__[original_param_name]
+                    if original_param_name in kwdefaults:
+                        existing_default = kwdefaults[param_name]
+                        if default_override != existing_default:
+                            raise ValueError(
+                                f"{callback} introduced incompatible default for {param_name} of {default_override} was {existing_default}"
+                            )
+                    else:
+                        kwdefaults[param_name] = default_override
+
+
 
         @wraps(function)
         def wrapped_function(*args, **kwargs):
@@ -119,6 +137,8 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
             parameters=itertools.chain(*(grouped_params[key] for key in sorted(grouped_params)))
         )
         wrapped_function.__signature__ = wrapped_function_signature
+        if kwdefaults:
+            wrapped_function.__kwdefaults__ = kwdefaults
         return wrapped_function
 
     return wrapper
