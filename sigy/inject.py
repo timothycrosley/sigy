@@ -46,6 +46,7 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
+        unused: set()
         kwdefaults: dict[str, Any] = function.__kwdefaults__.copy() if function.__kwdefaults__ else {}
         params: dict[str, Any] = {
             name: value for name, value in function_signature.parameters.items()
