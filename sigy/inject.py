@@ -46,8 +46,10 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
     def wrapper(function):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
-        unused: set()
-        kwdefaults: dict[str, Any] = function.__kwdefaults__.copy() if function.__kwdefaults__ else {}
+        used_params: set[str] = set()
+        kwdefaults: dict[str, Any] = (
+            function.__kwdefaults__.copy() if function.__kwdefaults__ else {}
+        )
         params: dict[str, Any] = {
             name: value for name, value in function_signature.parameters.items()
         }
@@ -96,8 +98,6 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
                     else:
                         kwdefaults[param_name] = default_override
 
-
-
         @wraps(function)
         def wrapped_function(*args, **kwargs):
             if prefix_:
@@ -109,11 +109,22 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
             else:
                 callback_kwargs = kwargs
             for name, callback in override_callbacks.items():
+                accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
+                if prefix_:
+                    used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))
+                else:
+                    used_params.update(accepted_params.keys())
                 if name not in kwargs:
-                    kwargs[name] = callback(
-                        *args, **_generate_accepted_kwargs(callback, callback_kwargs)
-                    )
-            return function(*args, **_generate_accepted_kwargs(function, kwargs))
+                    kwargs[name] = callback(*args, **accepted_params)
+
+            function_params = _generate_accepted_kwargs(function, kwargs)
+            used_params.update(function_params.keys())
+            unused_params = set(kwargs.keys()).difference(used_params)
+            if unused_params:
+                raise TypeError(
+                    f"{function.__name__}() got unexpected keyword argument(s): {', '.join(unused_params)}"
+                )
+            return function(*args, **function_params)
 
         wrapped_function.__annotations__.update(type_overrides)
 

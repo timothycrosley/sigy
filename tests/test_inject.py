@@ -32,6 +32,8 @@ def test_inject_basic():
         user_information(id="123", name="timothy", start=0)
     with pytest.raises(ValueError):
         user_information(start=0)
+    with pytest.raises(TypeError):
+        user_information(non_existent=100, name="timothy", start=0)
 
 
 def test_inject_prefix():
