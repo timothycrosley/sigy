@@ -33,7 +33,12 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
     return {}
 
 
-def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbacks: Callable):
+def inject(
+    prefix_: str | None = None,
+    shadow_: bool = False,
+    block_: bool = False,
+    **override_callbacks: Callable,
+):
     """Injects a the provided callback functions as new parameters onto the wrapped function based on param_name=callback_function
     The wrapped function is then modified to take on the parameters of the given callback function and place the results as the
     parameter it replaced.
@@ -41,6 +46,7 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
     Special modifying arguents
       - prefix_ - All arguments inherited by a given callback will have their name prefixed with this string.
       - shadow_ - If `True` the param being injected into will be hidden from the signature of the wrapped function.
+      - block_ - If `True` calls to the original params being replaced will be blocked with a TypeError exception.
     """
 
     def wrapper(function):
@@ -109,6 +115,8 @@ def inject(prefix_: str | None = None, shadow_: bool = False, **override_callbac
             else:
                 callback_kwargs = kwargs
             for name, callback in override_callbacks.items():
+                if block_ and name in kwargs:
+                    raise TypeError(f"{function._name__}() got unexpected keyword argument: {name}")
                 accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
                 if prefix_:
                     used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))
