@@ -116,7 +116,9 @@ def inject(
                 callback_kwargs = kwargs
             for name, callback in override_callbacks.items():
                 if block_ and name in kwargs:
-                    raise TypeError(f"{function._name__}() got unexpected keyword argument: {name}")
+                    raise TypeError(
+                        f"{function.__name__}() got unexpected keyword argument: {name}"
+                    )
                 accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
                 if prefix_:
                     used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))

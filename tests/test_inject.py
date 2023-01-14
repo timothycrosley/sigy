@@ -57,3 +57,22 @@ def test_inject_prefix():
         user_information(start=0)
     with pytest.raises(ValueError):
         user_information(name="timothy", start=0)
+
+
+def test_inject_block():
+    """Tests injecting with original parameter blocked"""
+
+    @sigy.inject(contact=contact)
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert user_information(contact="Timothy")
+
+    # blocking will make original parameter no longer directly reachable
+    @sigy.inject(contact=contact, block_=True)
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert user_information(name="Timothy")
+    with pytest.raises(TypeError):
+        assert user_information(contact="Timothy")
