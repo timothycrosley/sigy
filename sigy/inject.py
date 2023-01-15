@@ -46,8 +46,10 @@ def inject(
     Special modifying arguents
       - prefix_ - All arguments inherited by a given callback will have their name prefixed with this string.
       - shadow_ - If `True` the param being injected into will be hidden from the signature of the wrapped function.
-      - block_ - If `True` calls to the original params being replaced will be blocked with a TypeError exception.
+      - block_ - If `True` calls to the original params being replaced will be blocked with a TypeError exception. Implies shadow_.
     """
+    if block_ is True:
+        shadow_ = True
 
     def wrapper(function):
         function_signature = signature(function)

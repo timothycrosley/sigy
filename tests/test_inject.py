@@ -76,6 +76,7 @@ def test_inject_block():
     assert user_information(name="Timothy")
     with pytest.raises(TypeError):
         assert user_information(contact="Timothy")
+    assert "contact" not in user_information.__annotations__
 
 
 def test_shadow():
