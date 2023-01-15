@@ -76,3 +76,21 @@ def test_inject_block():
     assert user_information(name="Timothy")
     with pytest.raises(TypeError):
         assert user_information(contact="Timothy")
+
+
+def test_shadow():
+    """Test to ensure shadowing works to hide the original parameter, while still leaving it accessible."""
+
+    @sigy.inject(contact=contact)
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert "contact" in user_information.__annotations__
+
+    # shadowing will make original parameter no longer visible but still reachable
+    @sigy.inject(contact=contact, shadow_=True)
+    def user_information(contact: str, start: int = 0) -> list[str]:
+        return contact[start:]
+
+    assert "contact" not in user_information.__annotations__
+    assert user_information(contact="Timothy")
