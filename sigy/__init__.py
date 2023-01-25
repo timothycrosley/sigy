@@ -2,7 +2,7 @@
 
 A library to enable reusing and composing Python function signatures.
 """
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from sigy import introspect
 from sigy.inject import inject

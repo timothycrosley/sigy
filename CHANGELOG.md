@@ -16,5 +16,8 @@ OR
 
 Changelog
 =========
-## 1.0.0 - TBD
-- Initial API stable release.
+## 0.0.2 - 2023-01-24
+- Initial usable proof of concept release
+
+## 0.0.1 - 2022-12-20
+- Name reserved

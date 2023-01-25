@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sigy"
-version = "0.0.1"
+version = "0.0.2"
 description = "A library to enable reusing and composing Python function signatures."
 authors = ["Timothy Crosley <timothy.crosley@gmail.com>"]
 license = "MIT"
