@@ -16,3 +16,7 @@ _________________
 _________________
 
 **sigy** A library to enable reusing and composing Python function signatures.
+
+Ever want to reuse a part of a function signature for multiple function? Now you can!
+Sigy enables you to define a function signature, and logic once, and reuse it multiple times. 
+
