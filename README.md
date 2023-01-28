@@ -17,6 +17,7 @@ _________________
 
 **sigy** A library to enable reusing and composing Python function signatures.
 
-Ever want to reuse a part of a function signature for multiple function? Now you can!
-Sigy enables you to define a function signature, and logic once, and reuse it multiple times. 
+Introducing sigy - a powerful tool that simplifies code reuse and streamlines function-based frameworks like FastAPI and Flask. Whether you're looking to reuse one signature or many, sigy provides a general and framework-agnostic solution.
 
+By using sigy, you can easily combine multiple functions and seamlessly reuse boilerplate code. Simply write a function with a partial signature, and then include it within other functions using a decorator. This eliminates the need for plugin systems and offers a unique and efficient way to achieve code reuse across
+code bases.
