@@ -6,8 +6,9 @@ then go to: http://localhost:8000/docs with your browser.
 """
 from __future__ import annotations
 
-import sigy
 from fastapi import FastAPI
+
+import sigy
 
 app = FastAPI()
 
