@@ -82,7 +82,7 @@ def test_inject_block():
 def test_shadow():
     """Test to ensure shadowing works to hide the original parameter, while still leaving it accessible."""
 
-    @sigy.inject(contact=contact)
+    @sigy.inject(contact=contact, shadow_=False)
     def user_information(contact: str, start: int = 0) -> list[str]:
         return contact[start:]
 
