@@ -13,17 +13,17 @@ import sigy
 app = FastAPI()
 
 
-async def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):
+def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):
     return {"q": q, "skip": skip, "limit": limit}
 
 
 @app.get("/items/")
 @sigy.inject(commons=common_parameters)
-async def read_items(commons: dict):
+def read_items(commons: dict):
     return commons
 
 
 @app.get("/users/")
 @sigy.inject(commons=common_parameters)
-async def read_users(commons: dict):
+def read_users(commons: dict):
     return commons

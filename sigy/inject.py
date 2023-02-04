@@ -35,7 +35,7 @@ def _generate_accepted_kwargs(function, kwargs) -> dict[str, Any]:
 
 def inject(
     prefix_: str | None = None,
-    shadow_: bool = False,
+    shadow_: bool = True,
     block_: bool = False,
     **override_callbacks: Callable,
 ):
@@ -45,7 +45,7 @@ def inject(
 
     Special modifying arguents
       - prefix_ - All arguments inherited by a given callback will have their name prefixed with this string.
-      - shadow_ - If `True` the param being injected into will be hidden from the signature of the wrapped function.
+      - shadow_ - If `True` (the default) the param being injected into will be hidden from the signature of the wrapped function.
       - block_ - If `True` calls to the original params being replaced will be blocked with a TypeError exception. Implies shadow_.
     """
     if block_ is True:
