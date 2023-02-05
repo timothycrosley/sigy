@@ -4,7 +4,7 @@ import itertools
 from collections import defaultdict
 from functools import wraps
 import asyncio
-from inspect import Parameter, _ParameterKind, signature, iscoroutine
+from inspect import Parameter, _ParameterKind, signature, iscoroutine, iscoroutinefunction
 from typing import Any, Callable
 
 from sigy import introspect
@@ -107,59 +107,102 @@ def inject(
                     else:
                         kwdefaults[param_name] = default_override
 
-        @wraps(function)
-        def wrapped_function(*args, **kwargs):
-            if prefix_:
-                callback_kwargs = {
-                    key.split(prefix_, 1)[1]: value
-                    for key, value in kwargs.items()
-                    if key.startswith(prefix_)
-                }
-            else:
-                callback_kwargs = kwargs
-                
-            coroutines = {}
-            for name, callback in override_callbacks.items():
-                if block_ and name in kwargs:
-                    raise TypeError(
-                        f"{function.__name__}() got unexpected keyword argument: {name}"
-                    )
-                accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
+        if iscoroutinefunction(function):
+            @wraps(function)
+            async def wrapped_function(*args, **kwargs):
                 if prefix_:
-                    used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))
+                    callback_kwargs = {
+                        key.split(prefix_, 1)[1]: value
+                        for key, value in kwargs.items()
+                        if key.startswith(prefix_)
+                    }
                 else:
-                    used_params.update(accepted_params.keys())
-                if name not in kwargs:
-                    callback_result = callback(*args, **accepted_params)
-                    if iscoroutine(callback_result):
-                        coroutines[name] = callback_result
+                    callback_kwargs = kwargs
+                    
+                coroutines = {}
+                for name, callback in override_callbacks.items():
+                    if block_ and name in kwargs:
+                        raise TypeError(
+                            f"{function.__name__}() got unexpected keyword argument: {name}"
+                        )
+                    accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
+                    if prefix_:
+                        used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))
                     else:
-                        kwargs[name] = callback_result
-            if coroutines:
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError as e:
-                    if str(e).startswith('There is no current event loop in thread'):
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                    else:
-                        raise
+                        used_params.update(accepted_params.keys())
+                    if name not in kwargs:
+                        callback_result = callback(*args, **accepted_params)
+                        if iscoroutine(callback_result):
+                            coroutines[name] = callback_result
+                        else:
+                            kwargs[name] = callback_result
+                if coroutines:
+                    results = await asyncio.gather(*coroutines.values())
+                    for index, key in enumerate(coroutines):
+                        kwargs[key] = results[index]
 
-                if loop.is_running():
-                    raise RuntimeError("Can't compose coroutine signatures with non coroutine if separate event loop is running.")
+                function_params = _generate_accepted_kwargs(function, kwargs)
+                used_params.update(function_params.keys())
+                unused_params = set(kwargs.keys()).difference(used_params)
+                if unused_params:
+                    raise TypeError(
+                        f"{function.__name__}() got unexpected keyword argument(s): {', '.join(unused_params)}"
+                    )
+                return await function(*args, **function_params)
+        else:
+            @wraps(function)
+            def wrapped_function(*args, **kwargs):
+                if prefix_:
+                    callback_kwargs = {
+                        key.split(prefix_, 1)[1]: value
+                        for key, value in kwargs.items()
+                        if key.startswith(prefix_)
+                    }
                 else:
-                    results = loop.run_until_complete(asyncio.gather(*coroutines.values()))
-                for index, key in enumerate(coroutines):
-                    kwargs[key] = results[index]
+                    callback_kwargs = kwargs
+                    
+                coroutines = {}
+                for name, callback in override_callbacks.items():
+                    if block_ and name in kwargs:
+                        raise TypeError(
+                            f"{function.__name__}() got unexpected keyword argument: {name}"
+                        )
+                    accepted_params = _generate_accepted_kwargs(callback, callback_kwargs)
+                    if prefix_:
+                        used_params.update((f"{prefix_}{key}" for key in accepted_params.keys()))
+                    else:
+                        used_params.update(accepted_params.keys())
+                    if name not in kwargs:
+                        callback_result = callback(*args, **accepted_params)
+                        if iscoroutine(callback_result):
+                            coroutines[name] = callback_result
+                        else:
+                            kwargs[name] = callback_result
+                if coroutines:
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError as e:
+                        if str(e).startswith('There is no current event loop in thread'):
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                        else:
+                            raise
 
-            function_params = _generate_accepted_kwargs(function, kwargs)
-            used_params.update(function_params.keys())
-            unused_params = set(kwargs.keys()).difference(used_params)
-            if unused_params:
-                raise TypeError(
-                    f"{function.__name__}() got unexpected keyword argument(s): {', '.join(unused_params)}"
-                )
-            return function(*args, **function_params)
+                    if loop.is_running():
+                        raise RuntimeError("Can't compose coroutine signatures with non coroutine if separate event loop is running.")
+                    else:
+                        results = loop.run_until_complete(asyncio.gather(*coroutines.values()))
+                    for index, key in enumerate(coroutines):
+                        kwargs[key] = results[index]
+
+                function_params = _generate_accepted_kwargs(function, kwargs)
+                used_params.update(function_params.keys())
+                unused_params = set(kwargs.keys()).difference(used_params)
+                if unused_params:
+                    raise TypeError(
+                        f"{function.__name__}() got unexpected keyword argument(s): {', '.join(unused_params)}"
+                    )
+                return function(*args, **function_params)
 
         wrapped_function.__annotations__.update(type_overrides)
 
