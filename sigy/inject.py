@@ -3,7 +3,8 @@ from __future__ import annotations
 import itertools
 from collections import defaultdict
 from functools import wraps
-from inspect import Parameter, _ParameterKind, signature
+import asyncio
+from inspect import Parameter, _ParameterKind, signature, iscoroutine
 from typing import Any, Callable
 
 from sigy import introspect
@@ -116,6 +117,8 @@ def inject(
                 }
             else:
                 callback_kwargs = kwargs
+                
+            coroutines = {}
             for name, callback in override_callbacks.items():
                 if block_ and name in kwargs:
                     raise TypeError(
@@ -127,7 +130,27 @@ def inject(
                 else:
                     used_params.update(accepted_params.keys())
                 if name not in kwargs:
-                    kwargs[name] = callback(*args, **accepted_params)
+                    callback_result = callback(*args, **accepted_params)
+                    if iscoroutine(callback_result):
+                        coroutines[name] = callback_result
+                    else:
+                        kwargs[name] = callback_result
+            if coroutines:
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError as e:
+                    if str(e).startswith('There is no current event loop in thread'):
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    else:
+                        raise
+
+                if loop.is_running():
+                    raise RuntimeError("Can't compose coroutine signatures with non coroutine if separate event loop is running.")
+                else:
+                    results = loop.run_until_complete(asyncio.gather(*coroutines.values()))
+                for index, key in enumerate(coroutines):
+                    kwargs[key] = results[index]
 
             function_params = _generate_accepted_kwargs(function, kwargs)
             used_params.update(function_params.keys())
