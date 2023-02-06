@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 from collections import defaultdict
 from functools import wraps
-import asyncio
-from inspect import Parameter, _ParameterKind, signature, iscoroutine, iscoroutinefunction
+from inspect import Parameter, _ParameterKind, iscoroutine, iscoroutinefunction, signature
 from typing import Any, Callable
 
 from sigy import introspect
@@ -108,6 +108,7 @@ def inject(
                         kwdefaults[param_name] = default_override
 
         if iscoroutinefunction(function):
+
             @wraps(function)
             async def wrapped_function(*args, **kwargs):
                 if prefix_:
@@ -118,7 +119,7 @@ def inject(
                     }
                 else:
                     callback_kwargs = kwargs
-                    
+
                 coroutines = {}
                 for name, callback in override_callbacks.items():
                     if block_ and name in kwargs:
@@ -149,7 +150,9 @@ def inject(
                         f"{function.__name__}() got unexpected keyword argument(s): {', '.join(unused_params)}"
                     )
                 return await function(*args, **function_params)
+
         else:
+
             @wraps(function)
             def wrapped_function(*args, **kwargs):
                 if prefix_:
@@ -160,7 +163,7 @@ def inject(
                     }
                 else:
                     callback_kwargs = kwargs
-                    
+
                 coroutines = {}
                 for name, callback in override_callbacks.items():
                     if block_ and name in kwargs:
@@ -182,14 +185,16 @@ def inject(
                     try:
                         loop = asyncio.get_event_loop()
                     except RuntimeError as e:
-                        if str(e).startswith('There is no current event loop in thread'):
+                        if str(e).startswith("There is no current event loop in thread"):
                             loop = asyncio.new_event_loop()
                             asyncio.set_event_loop(loop)
                         else:
                             raise
 
                     if loop.is_running():
-                        raise RuntimeError("Can't compose coroutine signatures with non coroutine if separate event loop is running.")
+                        raise RuntimeError(
+                            "Can't compose coroutine signatures with non coroutine if separate event loop is running."
+                        )
                     else:
                         results = loop.run_until_complete(asyncio.gather(*coroutines.values()))
                     for index, key in enumerate(coroutines):
