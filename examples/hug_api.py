@@ -1,3 +1,7 @@
+"""Example of using sigy with hug
+
+run using hug -f hug_api.py
+"""
 from datetime import datetime
 from typing import NamedTuple
 
