@@ -1,13 +1,6 @@
 """Defines built in functions to aid in introspection"""
 from __future__ import absolute_import
 
-from types import MethodType
-
-
-def is_method(function):
-    """Returns True if the passed in function is identified as a method (NOT a function)"""
-    return isinstance(function, MethodType)
-
 
 def is_coroutine(function):
     """Returns True if the passed in function is a coroutine"""
