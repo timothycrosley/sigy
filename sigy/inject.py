@@ -5,7 +5,6 @@ import itertools
 from collections import defaultdict
 from functools import wraps
 from inspect import Parameter, _ParameterKind, iscoroutine, iscoroutinefunction, signature
-from types import CodeType
 from typing import Any, Callable
 
 from sigy import introspect
@@ -211,27 +210,6 @@ def inject(
                 return function(*args, **function_params)
 
         wrapped_function.__annotations__.update(type_overrides)
-        old_code = function.__code__
-        wrap_code = wrapped_function.__code__
-        new_code = CodeType(
-            wrap_code.co_argcount,
-            wrap_code.co_posonlyargcount,
-            wrap_code.co_kwonlyargcount,
-            wrap_code.co_nlocals,
-            wrap_code.co_stacksize,
-            wrap_code.co_flags,
-            wrap_code.co_code,
-            wrap_code.co_consts,
-            wrap_code.co_names,
-            wrap_code.co_varnames + tuple([param.name for param in add_params]),
-            old_code.co_filename,
-            old_code.co_name,
-            old_code.co_firstlineno,
-            wrap_code.co_linetable,
-            wrap_code.co_freevars,
-            wrap_code.co_cellvars,
-        )
-        wrapped_function.__code__ = new_code
 
         grouped_params: dict[_ParameterKind, list[Parameter]] = defaultdict(list)
         if shadow_:
