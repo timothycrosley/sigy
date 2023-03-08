@@ -18,7 +18,7 @@ Changelog
 =========
 
 ## 0.0.3 - TBD
-- Fixed usage from hug
+- Fixed usage from hug [TODO]
 
 ## 0.0.2 - 2023-01-24
 - Initial usable proof of concept release
