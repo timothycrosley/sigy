@@ -5,7 +5,7 @@ import itertools
 from collections import defaultdict
 from functools import wraps
 from inspect import Parameter, _ParameterKind, iscoroutine, iscoroutinefunction, signature
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from sigy import introspect
 
@@ -52,7 +52,7 @@ def inject(
     if block_ is True:
         shadow_ = True
 
-    def wrapper(function):
+    def wrapper(function: Callable):
         function_signature = signature(function)
         type_overrides: dict[str, Any] = {}
         used_params: set[str] = set()
@@ -212,6 +212,7 @@ def inject(
         wrapped_function.__annotations__.update(type_overrides)
 
         grouped_params: dict[_ParameterKind, list[Parameter]] = defaultdict(list)
+        existing_params: Iterable[Parameter]
         if shadow_:
             existing_params = (
                 value
@@ -222,16 +223,18 @@ def inject(
                 wrapped_function.__annotations__.pop(key)
         else:
             existing_params = function_signature.parameters.values()
-        for group, params in itertools.groupby(
+        for group, group_params in itertools.groupby(
             itertools.chain(existing_params, add_params),
             key=lambda param: param.kind,
         ):
-            grouped_params[group].extend(params)
+            grouped_params[group].extend(group_params)
 
         wrapped_function_signature = function_signature.replace(
-            parameters=itertools.chain(*(grouped_params[key] for key in sorted(grouped_params)))
+            parameters=tuple(
+                itertools.chain(*(grouped_params[key] for key in sorted(grouped_params)))
+            )
         )
-        wrapped_function.__signature__ = wrapped_function_signature
+        wrapped_function.__signature__ = wrapped_function_signature  # type: ignore
         if kwdefaults:
             wrapped_function.__kwdefaults__ = kwdefaults
         return wrapped_function
